@@ -1,26 +1,26 @@
 <template>
-  <div class="h-screen flex flex-col bg-yellow-50 p-4 gap-4">
+  <div class="h-screen flex flex-col bg-zinc-950 p-4 gap-4 text-zinc-300">
     <MobileBlocker />
 
     <!-- Header -->
     <div
-      class="bg-pink-400 rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 flex justify-between items-center">
-      <h1 class="text-3xl font-black">marauder-ui-pro</h1>
+      class="bg-black rounded-lg border border-zinc-800 shadow-lg p-2 px-4 flex justify-between items-center bg-zinc-900/50 backdrop-blur-md">
+      <img :src="pwnterreyLogo" alt="Pwnterrey" class="h-12 object-contain" />
       <div class="flex items-center space-x-4">
         <!-- Demo Mode Button -->
         <button v-if="!serialConnection.isConnected.value" @click="toggleDemoMode"
-          class="px-3 py-1 text-sm font-bold rounded border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-          :class="isDemoMode ? 'bg-purple-500 text-white' : 'bg-white'">
+          class="btn"
+          :class="isDemoMode ? 'btn-primary' : ''">
           {{ isDemoMode ? 'Exit Demo' : 'Try Demo' }}
         </button>
 
-        <span class="text-sm">Status:</span>
+        <span class="text-sm text-zinc-400">Status:</span>
         <button @click="handleConnect" v-if="!serialConnection.isConnected.value"
-          class="px-3 py-1 bg-green-500 text-white text-sm font-bold rounded border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+          class="btn btn-primary">
           Connect
         </button>
         <button @click="handleDisconnect" v-if="serialConnection.isConnected.value"
-          class="px-3 py-1 bg-red-500 text-white text-sm font-bold rounded border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+          class="btn btn-danger">
           Disconnect
         </button>
       </div>
@@ -31,17 +31,17 @@
       <!-- Left Sidebar -->
       <div class="w-1/4 flex flex-col gap-4">
         <!-- Command Builder -->
-        <div class="bg-white rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4">
+        <div class="card p-4">
           <CommandBuilder :rightContentView="rightContentView" />
         </div>
 
         <!-- Workflows -->
         <div
-          class="flex-1 bg-white rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 overflow-auto">
-          <h2 class="text-xl font-bold mb-4">Workflows</h2>
+          class="flex-1 card p-4 overflow-auto">
+          <h2 class="text-xl font-bold mb-4 text-zinc-100">Workflows</h2>
           <div class="space-y-2">
             <button v-for="workflow in workflows" :key="workflow.id" @click="openWorkflow(workflow)"
-              class="w-full px-3 py-2 text-left text-sm bg-gray-100 hover:bg-gray-200 rounded border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+              class="w-full btn text-left mb-2">
               {{ workflow.name }}
             </button>
           </div>
@@ -54,12 +54,12 @@
         <!-- Toggle Button -->
         <div class="mb-2 flex justify-end">
           <button @click="rightContentView = rightContentView === 'ap' ? 'bt' : 'ap'"
-            class="px-4 py-2 font-bold rounded border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-blue-500 text-white hover:bg-blue-600">
+            class="btn btn-accent">
             {{ rightContentView === 'ap' ? 'Bluetooth' : 'WiFi APs' }}
           </button>
         </div>
         <!-- APs or Bluetooth List -->
-        <div class="flex-1 bg-white rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 min-h-0">
+        <div class="flex-1 card p-4 min-h-0">
           <AccessPointTable v-if="rightContentView === 'ap'" />
           <BluetoothDeviceTable v-else />
         </div>
@@ -67,7 +67,7 @@
     </div>
 
     <!-- Terminal Output -->
-    <div class="h-64 bg-white rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4">
+    <div class="h-48 terminal-container p-4 bg-zinc-950/50 backdrop-blur-sm">
       <TerminalOutput />
     </div>
   </div>
@@ -86,6 +86,7 @@ import TerminalOutput from './components/TerminalOutput.vue'
 import AccessPointTable from './components/AccessPointTable.vue'
 import BluetoothDeviceTable from './components/BluetoothDeviceTable.vue'
 import WorkflowDialog from './components/WorkflowDialog.vue'
+import pwnterreyLogo from './assets/Pwnterrey-1024x379.png'
 import { useSerialConnection } from './utils/serialConnection'
 import { generateDemoData, generateDemoTerminalOutput } from './utils/demoData'
 const isDemoMode = ref(false)
