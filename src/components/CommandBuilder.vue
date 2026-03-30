@@ -50,6 +50,10 @@
           class="btn btn-accent col-span-2">
           Spam All
         </button>
+        <button @click="sendCommand('spoofat -t airtag')"
+          class="btn btn-danger col-span-2 mt-2">
+          BLE Spoof (AirTag)
+        </button>
       </div>
   
       <!-- Custom Command -->
@@ -91,6 +95,9 @@
     { label: 'Sniff Beacon', command: 'sniffbeacon' },
     { label: 'Sniff Deauth', command: 'sniffdeauth' },
     { label: 'Sniff PMKID', command: 'sniffpmkid' },
+    { label: 'Sniff Pwn', command: 'sniffpwn' },
+    { label: 'Sniff Raw', command: 'sniffraw' },
+    { label: 'Sniff Skim', command: 'sniffskim' },
     { label: 'Wardrive', command: 'wardrive -s' }
   ]
 
@@ -98,6 +105,7 @@
     { label: 'Scan Bluetooth', command: 'sniffbt' },
     { label: 'Scan Flipper', command: 'sniffbt -t flipper' },
     { label: 'Scan Airtag', command: 'sniffbt -t airtag' },
+    { label: 'BT Spoof', command: 'spoofat -t apple' },
     { label: 'Wardrive', command: 'btwardrive' }
   ]
 

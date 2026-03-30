@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen flex flex-col bg-zinc-950 p-4 gap-4 text-zinc-300">
+  <div class="min-h-screen flex flex-col bg-zinc-950 p-4 gap-4 text-zinc-300 overflow-y-auto">
     <MobileBlocker />
 
     <!-- Header -->
@@ -27,7 +27,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 flex gap-4 min-h-0">
+    <div class="flex gap-4">
       <!-- Left Sidebar -->
       <div class="w-1/4 flex flex-col gap-4">
         <!-- Command Builder -->
@@ -35,9 +35,12 @@
           <CommandBuilder :rightContentView="rightContentView" />
         </div>
 
+        <!-- System Utilities -->
+        <SystemUtilities />
+
         <!-- Workflows -->
         <div
-          class="flex-1 card p-4 overflow-auto">
+          class="card p-4">
           <h2 class="text-xl font-bold mb-4 text-zinc-100">Workflows</h2>
           <div class="space-y-2">
             <button v-for="workflow in workflows" :key="workflow.id" @click="openWorkflow(workflow)"
@@ -58,6 +61,10 @@
             {{ rightContentView === 'ap' ? 'Bluetooth' : 'WiFi APs' }}
           </button>
         </div>
+        <!-- Terminal Output -->
+        <div class="min-h-[12rem] h-48 terminal-container p-4 bg-zinc-950/50 backdrop-blur-sm mb-4">
+          <TerminalOutput />
+        </div>
         <!-- APs or Bluetooth List -->
         <div class="flex-1 card p-4 min-h-0">
           <AccessPointTable v-if="rightContentView === 'ap'" />
@@ -66,10 +73,6 @@
       </div>
     </div>
 
-    <!-- Terminal Output -->
-    <div class="h-48 terminal-container p-4 bg-zinc-950/50 backdrop-blur-sm">
-      <TerminalOutput />
-    </div>
   </div>
 
   <Teleport to="body">
@@ -86,6 +89,7 @@ import TerminalOutput from './components/TerminalOutput.vue'
 import AccessPointTable from './components/AccessPointTable.vue'
 import BluetoothDeviceTable from './components/BluetoothDeviceTable.vue'
 import WorkflowDialog from './components/WorkflowDialog.vue'
+import SystemUtilities from './components/SystemUtilities.vue'
 import pwnterreyLogo from './assets/Pwnterrey-1024x379.png'
 import { useSerialConnection } from './utils/serialConnection'
 import { generateDemoData, generateDemoTerminalOutput } from './utils/demoData'
@@ -279,6 +283,35 @@ const workflows = [
       },
       { command: 'list -a', description: 'Verify selected access points' },
       { command: 'sigmon', description: 'Start signal monitoring' }
+    ]
+  },
+  {
+    id: 'network-recon',
+    name: 'Network Recon (Full)',
+    description: 'Scans for hosts and maps open ports on the local network.',
+    steps: [
+      { command: 'pingscan', description: 'Ping scan for active hosts' },
+      { command: 'arpscan', description: 'ARP scan to resolve MAC addresses' },
+      { command: 'portscan', description: 'Port scan for open services' }
+    ]
+  },
+  {
+    id: 'mac-randomize',
+    name: 'Stealth Mode (MAC Randomize)',
+    description: 'Randomizes both AP and Station MAC addresses for stealth.',
+    steps: [
+      { command: 'randapmac', description: 'Randomize AP MAC' },
+      { command: 'randstamac', description: 'Randomize Station MAC' },
+      { command: 'info', description: 'Verify new identifiers' }
+    ]
+  },
+  {
+    id: 'karma-attack',
+    name: 'Karma Attack',
+    description: 'Automated setup of a Karma attack to attract searching clients.',
+    steps: [
+      { command: 'karma -p', description: 'Enable Karma mode' },
+      { command: 'scanap', description: 'Start background scan' }
     ]
   }
 ]
