@@ -115,48 +115,56 @@ watch(() => terminalOutput.value, (newLines) => {
   const linesToProcess = newLines.slice(lastProcessedIndex.value)
   lastProcessedIndex.value = newLines.length
 
-  let idx = 1;
+  const newDevices = new Map(devices.value);
+  let changed = false;
+
   linesToProcess.forEach(line => {
     const plainLine = line.replace(/<[^>]+>/g, '').trim();
-    // Parse formato: RSSI: <valor> Device: <mac|name>
-  const match = plainLine.match(/^RSSI:\s*(-?\d+)\s*Device:\s*(.+)$/);
-    if (match) {
-      const [_, rssi, device] = match;
+    // Firmware sends multiple devices concatenated: "-89 Device: mac-60 Device: name..."
+    const matches = plainLine.matchAll(/(-?\d+)\s+Device:\s*((?:(?!-?\d+\s+Device:).)+)/g);
+    for (const match of matches) {
+      const rssi = parseInt(match[1]);
+      const device = match[2].trim();
       const isMac = /^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$/.test(device);
       let mac = '-';
       let name = '-';
       let key = device;
-      // Buscar si ya existe un objeto con la misma MAC o nombre
-      let existing = undefined;
+
       if (isMac) {
         mac = device;
-        // Buscar por MAC
-        existing = Array.from(devices.value.values()).find(d => d.mac === mac);
+        const existing = Array.from(newDevices.values()).find(d => d.mac === mac);
         if (existing) {
           name = existing.name || '-';
           key = existing.mac || mac;
         }
       } else {
         name = device;
-        // Buscar por nombre
-        existing = Array.from(devices.value.values()).find(d => d.name === name);
+        const existing = Array.from(newDevices.values()).find(d => d.name === name);
         if (existing) {
           mac = existing.mac || '-';
           key = existing.name || name;
         }
       }
-      const newDevices = new Map(devices.value);
+
       newDevices.set(key, {
-        ...existing,
-        index: idx++,
+        index: newDevices.size + 1,
         mac,
         name,
-        rssi: parseInt(rssi),
+        rssi,
         lastSeen: new Date()
       });
-      devices.value = newDevices;
+      changed = true;
     }
   });
+
+  if (changed) {
+    // Re-index
+    let idx = 1;
+    for (const [key, dev] of newDevices) {
+      dev.index = idx++;
+    }
+    devices.value = newDevices;
+  }
 }, { deep: true });
 
 const cleanup = () => {
