@@ -7,6 +7,7 @@ const isConnected = ref(false)
 const terminalOutput = ref([])
 const isDemoMode = ref(false)
 let buffer = ''
+let keepReading = false
 
 export const useSerialConnection = () => {
   const connect = async () => {
@@ -26,6 +27,7 @@ export const useSerialConnection = () => {
       console.log('Port opened successfully')
 
       isConnected.value = true
+      keepReading = true
       addToTerminal('✓ Connected to serial port', 'success')
       startReading()
     } catch (error) {
@@ -39,57 +41,54 @@ export const useSerialConnection = () => {
   const disconnect = async () => {
     if (port.value) {
       try {
+        keepReading = false
         if (reader.value) {
           await reader.value.cancel()
+          reader.value = null
         }
         await port.value.close()
         port.value = null
-        reader.value = null
         isConnected.value = false
+        buffer = ''
         addToTerminal('✗ Disconnected from serial port', 'error')
       } catch (error) {
         console.error('Disconnection error:', error)
+        port.value = null
+        reader.value = null
+        isConnected.value = false
         addToTerminal(`✗ Error disconnecting: ${error.message}`, 'error')
       }
     }
   }
 
   const startReading = async () => {
-    while (port.value && port.value.readable) {
+    const decoder = new TextDecoder()
+    while (port.value && port.value.readable && keepReading) {
       try {
-        const textDecoder = new TextDecoderStream()
-        const readableStreamClosed = port.value.readable.pipeTo(textDecoder.writable)
-        reader.value = textDecoder.readable.getReader()
+        reader.value = port.value.readable.getReader()
+        while (true) {
+          const { value, done } = await reader.value.read()
+          if (done) break
 
-        try {
-          while (true) {
-            const { value, done } = await reader.value.read()
-            if (done) break
+          if (value) {
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop()
 
-            if (value) {
-              // Accumulate the buffer and process complete lines
-              buffer += value
-              const lines = buffer.split('\n')
-              buffer = lines.pop() // Keep the last incomplete line in buffer
-
-              // Process complete lines
-              lines.forEach(line => {
-                if (line.trim()) {
-                  addToTerminal(line.trim())
-                }
-              })
-            }
-          }
-        } catch (error) {
-          console.error('Read error:', error)
-        } finally {
-          if (reader.value) {
-            reader.value.releaseLock()
+            lines.forEach(line => {
+              if (line.trim()) {
+                addToTerminal(line.trim())
+              }
+            })
           }
         }
       } catch (error) {
-        addToTerminal(`✗ Read error: ${error.message}`, 'error')
-        break
+        // Expected when disconnect cancels the reader
+      } finally {
+        if (reader.value) {
+          try { reader.value.releaseLock() } catch (e) {}
+          reader.value = null
+        }
       }
     }
   }
@@ -142,6 +141,30 @@ export const useSerialConnection = () => {
     }
   }
 
+  const sendRaw = async (rawText) => {
+    if (isDemoMode.value) {
+      addToTerminal(`> [raw] ${rawText}`, 'command')
+      addToTerminal('Raw payload sent (demo mode)')
+      return
+    }
+
+    if (!rawText || !port.value) {
+      addToTerminal('✗ No raw payload or not connected', 'error')
+      return
+    }
+
+    try {
+      const writer = port.value.writable.getWriter()
+      const encoder = new TextEncoder()
+      await writer.write(encoder.encode(rawText))
+      addToTerminal(`> [raw] ${rawText}`, 'command')
+      writer.releaseLock()
+    } catch (error) {
+      console.error('Raw send error:', error)
+      addToTerminal(`✗ Failed to send raw payload: ${error.message}`, 'error')
+    }
+  }
+
   const addToTerminal = (text, type = 'normal') => {
     console.log('Adding to terminal:', text, type) // Debug log
     if (text.trim()) {
@@ -171,6 +194,7 @@ export const useSerialConnection = () => {
     terminalOutput,
     connect,
     disconnect,
-    sendCommand
+    sendCommand,
+    sendRaw
   }
 }

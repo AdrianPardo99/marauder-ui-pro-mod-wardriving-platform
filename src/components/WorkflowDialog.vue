@@ -27,25 +27,40 @@
 
               <!-- Command preview -->
               <div class="font-mono text-sm bg-black p-2 rounded break-all border border-zinc-800 text-emerald-500">
-                {{ getFormattedCommand(step) }}
+                {{ getFormattedCommand(step, index) }}
               </div>
 
               <!-- Input fields -->
               <div v-if="step.requiresInput" class="space-y-2">
                 <!-- First input -->
                 <div class="space-y-1">
-                  <label class="text-sm font-medium text-gray-700">{{ step.inputLabel }}</label>
+                  <label class="text-sm font-medium text-zinc-300">{{ step.inputLabel }}</label>
                   <input v-model="inputs[index]" type="text" :placeholder="step.placeholder"
                     class="input-field w-full">
-                  <p v-if="step.help" class="text-xs text-gray-500">{{ step.help }}</p>
+                  <p v-if="step.help" class="text-xs text-zinc-500">{{ step.help }}</p>
                 </div>
 
                 <!-- Second input if required -->
                 <div v-if="step.requiresSecondInput" class="space-y-1">
-                  <label class="text-sm font-medium text-gray-700">{{ step.secondInputLabel }}</label>
+                  <label class="text-sm font-medium text-zinc-300">{{ step.secondInputLabel }}</label>
                   <input v-model="secondInputs[index]" type="text" :placeholder="step.secondPlaceholder"
                     class="input-field w-full">
                 </div>
+              </div>
+
+              <div v-if="step.requiresSerialPayload" class="space-y-1">
+                <label class="text-sm font-medium text-zinc-300">
+                  {{ step.serialPayloadLabel || 'Serial Payload' }}
+                </label>
+                <textarea
+                  v-model="serialPayloads[index]"
+                  :placeholder="step.serialPayloadPlaceholder || 'Paste payload here...'"
+                  rows="8"
+                  class="input-field w-full font-mono"
+                />
+                <p class="text-xs text-zinc-500">
+                  This payload is sent as raw serial data immediately after the command.
+                </p>
               </div>
             </div>
           </div>
@@ -114,6 +129,7 @@ const emit = defineEmits(['close', 'execute'])
 
 const inputs = ref({})
 const secondInputs = ref({})
+const serialPayloads = ref({})
 
 const isDestructiveWorkflow = computed(() => {
   return props.workflow.id.includes('deauth') ||
@@ -127,60 +143,55 @@ const isValid = computed(() => {
       if (!inputs.value[index]?.trim()) return false
       if (step.requiresSecondInput && !secondInputs.value[index]?.trim()) return false
     }
+    if (step.requiresSerialPayload && !serialPayloads.value[index]?.trim()) return false
     return true
   })
 })
 
-const getFormattedCommand = (step) => {
+const resolveCommandForStep = (step, index, preview = false) => {
   if (!step.requiresInput) return step.command
 
-  const index = props.workflow.steps.indexOf(step)
-  let command = step.command
-
-  // Handle special case for SSID generation
   if (step.command.includes('{type}') && step.command.includes('{value}')) {
-    const [type, value] = (inputs.value[index] || '').split(' ')
-    command = command.replace('{type}', type || '{type}')
-    command = command.replace('{value}', value || '{value}')
+    const parts = (inputs.value[index] || '').trim().split(/\s+/)
+    const type = parts[0]
+    const value = parts.slice(1).join(' ')
+    let command = step.command
+    command = command.replace('{type}', type || (preview ? '{type}' : ''))
+    command = command.replace('{value}', value || (preview ? '{value}' : ''))
     return command
   }
 
-  // Replace all other placeholders
-  command = command.replace(/{([^}]+)}/g, (match, key) => {
-    if (key === 'source' || key === 'dest') {
-      return secondInputs.value[index] || `{${key}}`
-    }
-    return inputs.value[index] || `{${key}}`
-  })
+  let placeholderIndex = 0
+  return step.command.replace(/{([^}]+)}/g, (match) => {
+    placeholderIndex += 1
 
-  return command
+    if (placeholderIndex === 1) {
+      const value = inputs.value[index]?.trim()
+      return value || (preview ? match : '')
+    }
+
+    if (placeholderIndex === 2) {
+      const value = secondInputs.value[index]?.trim()
+      return value || (preview ? match : '')
+    }
+
+    return preview ? match : ''
+  })
+}
+
+const getFormattedCommand = (step, index) => {
+  return resolveCommandForStep(step, index, true)
 }
 
 const executeWorkflow = () => {
-  const commands = props.workflow.steps.map(step => {
-    if (!step.requiresInput) return step.command
-
-    const index = props.workflow.steps.indexOf(step)
-    let command = step.command
-
-    // Handle special case for SSID generation
-    if (step.command.includes('{type}') && step.command.includes('{value}')) {
-      const [type, value] = inputs.value[index].split(' ')
-      command = command.replace('{type}', type)
-      command = command.replace('{value}', value)
-      return command
+  const steps = props.workflow.steps.map((step, index) => {
+    return {
+      command: resolveCommandForStep(step, index, false),
+      serialPayload: step.requiresSerialPayload ? serialPayloads.value[index]?.trim() : undefined,
+      payloadDelayMs: step.payloadDelayMs ?? 200
     }
-
-    // Replace all other placeholders
-    command = command.replace(/{([^}]+)}/g, (match, key) => {
-      if (key === 'source') return inputs.value[index]
-      if (key === 'dest') return secondInputs.value[index]
-      return inputs.value[index]
-    })
-
-    return command
   })
 
-  emit('execute', commands)
+  emit('execute', steps)
 }
 </script>

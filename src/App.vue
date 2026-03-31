@@ -160,6 +160,87 @@ const workflows = [
     ]
   },
   {
+    id: 'clone-ap-mac',
+    name: 'Clone AP MAC',
+    description: 'Scan APs, select a target AP, and clone its MAC.',
+    steps: [
+      { command: 'scanap', description: 'Scan for access points' },
+      { command: 'list -a', description: 'List available access points' },
+      {
+        command: 'select -a {index}',
+        description: 'Select AP index',
+        requiresInput: true,
+        inputLabel: 'AP index',
+        placeholder: '0'
+      },
+      {
+        command: 'cloneapmac -a {index}',
+        description: 'Clone selected AP MAC',
+        requiresInput: true,
+        inputLabel: 'AP index',
+        placeholder: '0'
+      }
+    ]
+  },
+  {
+    id: 'clone-station-mac',
+    name: 'Clone Station MAC',
+    description: 'Scan clients, select a station, and clone its MAC.',
+    steps: [
+      { command: 'scanall', description: 'Scan all channels' },
+      { command: 'list -c', description: 'List clients/stations' },
+      {
+        command: 'select -c {index}',
+        description: 'Select station index',
+        requiresInput: true,
+        inputLabel: 'Station index',
+        placeholder: '0'
+      },
+      {
+        command: 'clonestamac -s {index}',
+        description: 'Clone selected station MAC',
+        requiresInput: true,
+        inputLabel: 'Station index',
+        placeholder: '0'
+      }
+    ]
+  },
+  {
+    id: 'join-network',
+    name: 'Join Network',
+    description: 'Scan APs and join a network using AP index and password.',
+    steps: [
+      { command: 'scanap', description: 'Scan for access points' },
+      { command: 'list -a', description: 'List available access points' },
+      {
+        command: 'join -a {index} -p {password}',
+        description: 'Join selected AP',
+        requiresInput: true,
+        inputLabel: 'AP index',
+        placeholder: '0',
+        requiresSecondInput: true,
+        secondInputLabel: 'Password',
+        secondPlaceholder: 'network-password'
+      }
+    ]
+  },
+  {
+    id: 'evil-portal-serial',
+    name: 'Evil Portal (Serial)',
+    description: 'Set portal HTML through serial payload and then start Evil Portal.',
+    steps: [
+      {
+        command: 'evilportal -c sethtmlstr',
+        description: 'Prepare Marauder to receive portal HTML payload',
+        requiresSerialPayload: true,
+        serialPayloadLabel: 'Portal HTML',
+        serialPayloadPlaceholder: '<!doctype html>\n<html>\n  <body>Portal content</body>\n</html>',
+        payloadDelayMs: 150
+      },
+      { command: 'evilportal -c start', description: 'Start Evil Portal with loaded HTML' }
+    ]
+  },
+  {
     id: 'list-beacon-spam',
     name: 'List Beacon Spam',
     description: 'Creates a custom list of SSIDs and broadcasts beacon frames using this list.',
@@ -310,11 +391,19 @@ const openWorkflow = (workflow) => {
   selectedWorkflow.value = workflow
 }
 
-const executeWorkflow = async (commands) => {
-  console.log('Executing commands:', commands) // Debug log
-  for (const command of commands) {
-    await serialConnection.sendCommand(command)
-    // Add small delay between commands
+const executeWorkflow = async (steps) => {
+  console.log('Executing workflow steps:', steps) // Debug log
+  for (const step of steps) {
+    const command = typeof step === 'string' ? step : step.command
+    if (command) {
+      await serialConnection.sendCommand(command)
+    }
+
+    if (typeof step !== 'string' && step.serialPayload) {
+      await new Promise(resolve => setTimeout(resolve, step.payloadDelayMs ?? 200))
+      await serialConnection.sendRaw(step.serialPayload)
+    }
+
     await new Promise(resolve => setTimeout(resolve, 500))
   }
   selectedWorkflow.value = null
