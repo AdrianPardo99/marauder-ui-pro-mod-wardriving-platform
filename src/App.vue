@@ -84,6 +84,7 @@
           <AccessPointTable v-if="rightContentView === 'ap'" />
           <BluetoothDeviceTable v-else-if="rightContentView === 'bt'" />
           <GpsPanel v-else-if="rightContentView === 'gps'" />
+          <WardrivePanel v-else-if="rightContentView === 'wardrive'" />
         </div>
       </div>
     </div>
@@ -97,13 +98,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, provide, onMounted, onUnmounted } from 'vue'
 import MobileBlocker from './components/MobileBlocker.vue'
 import CommandBuilder from './components/CommandBuilder.vue'
 import TerminalOutput from './components/TerminalOutput.vue'
 import AccessPointTable from './components/AccessPointTable.vue'
 import BluetoothDeviceTable from './components/BluetoothDeviceTable.vue'
 import GpsPanel from './components/GpsPanel.vue'
+import WardrivePanel from './components/WardrivePanel.vue'
 import WorkflowDialog from './components/WorkflowDialog.vue'
 import SystemUtilities from './components/SystemUtilities.vue'
 import pwnterreyLogo from './assets/Pwnterrey-1024x379.png'
@@ -117,8 +119,14 @@ const rightContentView = ref('ap')
 const viewOptions = [
   { key: 'ap', label: 'WiFi APs' },
   { key: 'bt', label: 'Bluetooth' },
-  { key: 'gps', label: 'GPS' }
+  { key: 'gps', label: 'GPS' },
+  { key: 'wardrive', label: 'Wardrive' }
 ]
+
+const switchToView = (view) => {
+  rightContentView.value = view
+}
+provide('switchToView', switchToView)
 
 // Add mobile detection
 const isMobileDevice = ref(false)

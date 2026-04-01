@@ -18,10 +18,10 @@
   
       <!-- Scan Commands -->
       <div class="grid grid-cols-2 gap-2">
-        <button 
-          v-for="cmd in scanCommands" 
-          :key="cmd.command"
-          @click="sendCommand(cmd.command)"
+        <button
+          v-for="cmd in scanCommands"
+          :key="cmd.command || cmd.action"
+          @click="cmd.action ? switchToView(cmd.action) : sendCommand(cmd.command)"
           class="btn"
         >
           {{ cmd.label }}
@@ -80,7 +80,7 @@
   </template>
   
   <script setup>
-  import { ref, computed, defineProps } from 'vue'
+  import { ref, computed, inject, defineProps } from 'vue'
   import { useSerialConnection } from '../utils/serialConnection'
 
   const props = defineProps({
@@ -91,6 +91,7 @@
   })
 
   const { sendCommand: serialSendCommand } = useSerialConnection()
+  const switchToView = inject('switchToView')
   const customCommand = ref('')
 
   const wifiCommands = [
@@ -102,7 +103,7 @@
     { label: 'Sniff Pwn', command: 'sniffpwn' },
     { label: 'Sniff Raw', command: 'sniffraw' },
     { label: 'Sniff Skim', command: 'sniffskim' },
-    { label: 'Wardrive', command: 'wardrive -serial' }
+    { label: 'Wardrive', action: 'wardrive' }
   ]
 
   const btCommands = [
@@ -110,7 +111,7 @@
     { label: 'Scan Flipper', command: 'sniffbt -t flipper' },
     { label: 'Scan Airtag', command: 'sniffbt -t airtag' },
     { label: 'BT Spoof', command: 'spoofat -t apple' },
-    { label: 'Wardrive', command: 'btwardrive' }
+    { label: 'Wardrive', action: 'wardrive' }
   ]
 
   const scanCommands = computed(() => {

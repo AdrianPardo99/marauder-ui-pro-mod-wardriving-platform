@@ -10,7 +10,7 @@
         <button @click="emitCommand('stopscan')" class="command-btn bg-red-500 hover:bg-red-600">
           Stop Scan
         </button>
-        <button @click="emitCommand('wardrive -serial')" class="command-btn">
+        <button @click="switchToView('wardrive')" class="command-btn">
           Wardrive
         </button>
       </div>
@@ -18,8 +18,11 @@
   </template>
   
   <script setup>
+  import { inject } from 'vue'
+
   const emit = defineEmits(['command-built'])
-  
+  const switchToView = inject('switchToView')
+
   const emitCommand = (command) => {
     emit('command-built', command)
   }
