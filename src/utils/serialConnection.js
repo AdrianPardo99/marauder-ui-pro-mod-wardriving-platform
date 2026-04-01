@@ -212,9 +212,30 @@ export const useSerialConnection = () => {
     }
   }
 
+  // Firmware messages that indicate a command failed to start
+  const failurePatterns = [
+    'GPS Module not detected',
+    'GPS not supported',
+    'GPS Not Found',
+    'Could not detect GPS baudrate',
+    'Bluetooth not supported',
+    'SD card is not connected',
+    'SD card support disabled',
+    'You did not provide a valid argument',
+    'You did not provide a valid flag'
+  ]
+
   const addToTerminal = (text, type = 'normal') => {
     console.log('Adding to terminal:', text, type) // Debug log
     if (text.trim()) {
+      // Clear active command if firmware reports failure
+      if (activeCommand.value && type === 'normal') {
+        const lower = text.toLowerCase()
+        if (failurePatterns.some(p => lower.includes(p.toLowerCase()))) {
+          activeCommand.value = null
+        }
+      }
+
       const lineClass = getTypeClass(type)
       terminalOutput.value = [...terminalOutput.value, `<span class="${lineClass}">${text}</span>`]
 
