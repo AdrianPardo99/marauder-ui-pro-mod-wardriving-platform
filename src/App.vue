@@ -86,6 +86,7 @@
           <BluetoothDeviceTable v-else-if="rightContentView === 'bt'" />
           <GpsPanel v-else-if="rightContentView === 'gps'" />
           <WardrivePanel v-else-if="rightContentView === 'wardrive'" />
+          <StoragePanel v-else-if="rightContentView === 'storage'" />
         </div>
       </div>
     </div>
@@ -107,6 +108,7 @@ import AccessPointTable from './components/AccessPointTable.vue'
 import BluetoothDeviceTable from './components/BluetoothDeviceTable.vue'
 import GpsPanel from './components/GpsPanel.vue'
 import WardrivePanel from './components/WardrivePanel.vue'
+import StoragePanel from './components/StoragePanel.vue'
 import WorkflowDialog from './components/WorkflowDialog.vue'
 import SystemUtilities from './components/SystemUtilities.vue'
 import PlatformAuthBar from './components/PlatformAuthBar.vue'
@@ -122,7 +124,8 @@ const viewOptions = [
   { key: 'ap', label: 'WiFi APs' },
   { key: 'bt', label: 'Bluetooth' },
   { key: 'gps', label: 'GPS' },
-  { key: 'wardrive', label: 'Wardrive' }
+  { key: 'wardrive', label: 'Wardrive' },
+  { key: 'storage', label: 'Storage' }
 ]
 
 const switchToView = (view) => {
