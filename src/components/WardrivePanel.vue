@@ -74,6 +74,7 @@ import { useSerialConnection } from '../utils/serialConnection'
 import { useAuth } from '../composables/useAuth'
 import { buildWardriveCsvBlob, wardriveCsvFileName, buildWardriveCsvFile } from '../utils/wardriveCsv'
 import { uploadWardriveFiles } from '../utils/platformUpload'
+import { parseWardriveHeader, parseWardriveRow, wardriveEntryKey } from '../utils/wardriveParser'
 
 const { sendCommand, terminalOutput } = useSerialConnection()
 const { getToken, isAuthenticated } = useAuth()
@@ -82,6 +83,7 @@ const entries = ref([])
 const csvHeader = ref('')
 const csvColumnHeader = ref('')
 const lastProcessedIndex = ref(0)
+const entryKeys = ref(new Set())
 
 const uploadLoading = ref(false)
 const uploadMessage = ref('')
@@ -116,34 +118,10 @@ const startWardrive = async (command) => {
 
 const clearData = () => {
   entries.value = []
+  entryKeys.value = new Set()
   csvHeader.value = ''
   csvColumnHeader.value = ''
   uploadMessage.value = ''
-}
-
-const parseWardriveRow = (plain) => {
-  // CSV format: MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,Lat,Lon,Alt,Accuracy,Type
-  // BLE format: MAC,,AuthMode,FirstSeen,0,RSSI,Lat,Lon,Alt,Accuracy,BLE
-  const parts = plain.split(',')
-  if (parts.length < 11) return null
-
-  const mac = parts[0].trim()
-  // Validate MAC format
-  if (!/^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$/.test(mac)) return null
-
-  return {
-    mac,
-    ssid: parts[1] || '',
-    auth: parts[2] || '',
-    firstSeen: parts[3] || '',
-    channel: parts[4] || '-',
-    rssi: parts[5] || '',
-    lat: parts[6] || '',
-    lon: parts[7] || '',
-    alt: parts[8] || '',
-    accuracy: parts[9] || '',
-    type: parts[10]?.trim() || ''
-  }
 }
 
 watch(() => terminalOutput.value, (newLines) => {
@@ -156,24 +134,23 @@ watch(() => terminalOutput.value, (newLines) => {
   lastProcessedIndex.value = newLines.length
 
   linesToProcess.forEach(line => {
-    const plain = line.replace(/<[^>]+>/g, '').trim()
-    if (!plain) return
-
-    // Capture Wigle header
-    if (plain.startsWith('WigleWifi-1.4')) {
-      csvHeader.value = plain
+    const header = parseWardriveHeader(line)
+    if (header?.type === 'wigle') {
+      csvHeader.value = header.value
       return
     }
 
-    // Capture column header
-    if (plain.startsWith('MAC,SSID,AuthMode')) {
-      csvColumnHeader.value = plain
+    if (header?.type === 'columns') {
+      csvColumnHeader.value = header.value
       return
     }
 
-    // Parse data rows
-    const entry = parseWardriveRow(plain)
+    const entry = parseWardriveRow(line)
     if (entry) {
+      const key = wardriveEntryKey(entry)
+      if (entryKeys.value.has(key)) return
+
+      entryKeys.value.add(key)
       entries.value = [...entries.value, entry]
     }
   })
